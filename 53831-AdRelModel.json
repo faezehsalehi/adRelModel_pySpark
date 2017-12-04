@@ -1,0 +1,1108 @@
+{
+  "paragraphs": [
+    {
+      "text": "%pyspark\nimport optparse\nfrom pyspark.sql import SparkSession\nimport pyspark.sql.functions as F\nfrom pyspark.sql.functions import *\nfrom pyspark.sql.functions import udf\nfrom pyspark.sql.types import StringType\nfrom pyspark.ml import Pipeline\nfrom pyspark.ml.classification import RandomForestClassifier as RF\nfrom pyspark.ml.feature import StringIndexer, VectorIndexer, VectorAssembler, SQLTransformer\nfrom pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator\nfrom pyspark.ml.tuning import CrossValidator, ParamGridBuilder\nfrom pyspark.ml.classification import LogisticRegression\nimport numpy as np\nimport functools\nfrom pyspark.ml.feature import OneHotEncoder\nimport pyspark.sql.functions as F\nfrom pyspark.sql.types import StringType\nimport math\n\n\nspark \u003d SparkSession\\\n    .builder\\\n    .appName(\"PythonSQL\")\\\n    .config(\"spark.some.config.option\", \"some-value\")\\\n    .getOrCreate()",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:29:59 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1511377091355_-1772092670",
+      "id": "20171122-185811_792168994_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 22, 2017 6:58:11 PM",
+      "dateStarted": "Dec 4, 2017 10:29:59 PM",
+      "dateFinished": "Dec 4, 2017 10:29:59 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#reading the input data\n\nparser \u003d optparse.OptionParser()\nparser.add_option(\"-S\", \"--startDate\", type\u003d\"string\", dest\u003d\"startDate\",\n                    help\u003d\"start date of input data\",\n                    default\u003d\"2017-11-10\"\n                    )\n                    \nparser.add_option(\"-E\", \"--endDate\", type\u003d\"string\", dest\u003d\"endDate\",\n                    help\u003d\"end date of input data\",\n                    default\u003d\"2017-11-15\"\n                    )                    \n\n(opts, args) \u003d parser.parse_args()\n\nstartDate \u003d opts.startDate\nendDate \u003d opts.endDate\n\nquery \u003d \"select has_install, has_click, publisher_app, reachability, country, model_id, ad_type, advertiser_app, advertiser_campaign,advertiser_condition_set, device_advertising_app_impressions,os,impression_dt, impression_ts, local_time, adv_app_last_impression_ts, adv_app_last_click_ts, ipm_score, bid_value, creative_type, app_platform, impression_id, impression_dt from adrel.impressions_enhanced where impression_dt \u003e \u0027%s\u0027 AND impression_dt \u003c\u003d \u0027%s\u0027 AND ad_type IN (1,3,4,5,8,9) AND advertising_campaign_type \u003d 3 AND advertiser_campaign IS NOT NULL AND advertiser_condition_set IS NOT NULL\" %(startDate, endDate)\n\naffinity_query \u003d\"select app1 as advertiser_app , app2 as publisher_app, lift_lb as affinity from device_aggr.aff_score_app2app_latest WHERE lift_lb \u003e 1\"\n\nrawData1\u003dspark.sql(query)\n\nrawData2\u003dspark.sql(affinity_query)\n\nrawData \u003d rawData1.join(broadcast(rawData2), [\"advertiser_app\", \"publisher_app\"], \"left_outer\")",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:30:02 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1511381926258_-55397870",
+      "id": "20171122-201846_1727299415_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 22, 2017 8:18:46 PM",
+      "dateStarted": "Dec 4, 2017 10:30:02 PM",
+      "dateFinished": "Dec 4, 2017 10:30:03 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n#rawData.head(10)\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 8:54:48 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1511390987393_-991392971",
+      "id": "20171122-224947_1517165558_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 22, 2017 10:49:47 PM",
+      "dateStarted": "Dec 4, 2017 8:54:48 PM",
+      "dateFinished": "Dec 4, 2017 8:54:48 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#filling missing values\n\nrawData \u003d rawData.na.fill({\u0027affinity\u0027: 0, \u0027has_install\u0027: 0, \u0027has_click\u0027: 0,  \u0027publisher_app\u0027: \u0027unknown\u0027, \u0027reachability\u0027: \u0027unknown\u0027, \u0027country\u0027: \u0027unknown\u0027, \u0027model_id\u0027: \u0027unknown\u0027, \u0027ad_type\u0027: \u0027unknown\u0027, \u0027advertiser_app\u0027: \u0027unknown\u0027,\u0027advertiser_campaign\u0027: \u0027unknown\u0027,\u0027advertiser_condition_set\u0027: \u0027unknown\u0027,\u0027device_advertising_app_impressions\u0027: 0, \u0027os\u0027: \u0027unknown\u0027, \u0027ipm_score\u0027: -1, \u0027bid_value\u0027: 0, \u0027creative_type\u0027: \u0027-1\u0027, \u0027app_platform\u0027: \u0027unknown\u0027, \u0027impression_ts\u0027 : -1, \u0027adv_app_last_impression_ts\u0027: -1, \u0027adv_app_last_click_ts\u0027: -1})",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:30:09 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1511814901775_-2017526076",
+      "id": "20171127-203501_226838906_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 27, 2017 8:35:01 PM",
+      "dateStarted": "Dec 4, 2017 10:30:09 PM",
+      "dateFinished": "Dec 4, 2017 10:30:09 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#model id mapping\n\ndef deviceIdMap(modelId):\n    defaultDeviceModel \u003d \"android\"\n    ModelMap \u003d {\n    \"ipad6\": \"iPad6\",\n    \"ipad5\": \"iPad5\",\n    \"ipad4\": \"iPad4\",\n    \"ipad3\": \"iPad3\",\n    \"ipad2\": \"iPad2\",\n    \"ipad1\": \"iPad1\",\n    \"iphone9\": \"iPhone9\",\n    \"iphone8\": \"iPhone8\",\n    \"iphone7\": \"iPhone7\",\n    \"iphone6\": \"iPhone6\",\n    \"iphone5\": \"iPhone5\",\n    \"iphone4\": \"iPhone4\",\n    \"iphone3\": \"iPhone3\",\n    \"iphone2\": \"iPhone2\",\n    \"iphone1\": \"iPhone1\",\n    \"ipod7\": \"iPod7\",\n    \"ipod6\": \"iPod6\",\n    \"ipod5\": \"iPod5\",\n    \"ipod4\": \"iPod4\",\n    \"ipod3\": \"iPod3\",\n    \"ipod2\": \"iPod2\",\n    \"ipod touch\": \"iPodTouch\",\n    \"ipad\": \"iPad\", \n    \"iphone\": \"iPhone\"\n    }\n \n    return ModelMap.get(modelId.lower().split(\",\")[0], defaultDeviceModel).lower()\n \n\nmodelMap_udf \u003d F.udf(deviceIdMap, StringType())\nrawData \u003d rawData.withColumn(\"modelId\", modelMap_udf(\u0027model_id\u0027))\nrawData \u003d rawData.drop(\u0027model_id\u0027)    ",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:30:13 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1511893001099_857949105",
+      "id": "20171128-181641_20382399_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 28, 2017 6:16:41 PM",
+      "dateStarted": "Dec 4, 2017 10:30:13 PM",
+      "dateFinished": "Dec 4, 2017 10:30:13 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#deviceAppImpressions\n\ndeviceAppImpr_udf \u003d F.udf(lambda impressionCount: int(math.floor(math.pow(math.log(impressionCount), 2))) if impressionCount\u003e0 else \"X\", StringType())\n\nrawData \u003d rawData.withColumn(\"deviceAppImpressions\", deviceAppImpr_udf(\u0027device_advertising_app_impressions\u0027))\n\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:30:21 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512201160406_2007305799",
+      "id": "20171202-075240_2049184034_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Dec 2, 2017 7:52:40 AM",
+      "dateStarted": "Dec 4, 2017 10:30:21 PM",
+      "dateFinished": "Dec 4, 2017 10:30:21 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#placement and creative type\n\ndef placementAndCreativeMap(adType, creativeType):\n    if (adType \u003d\u003d \"4\" or adType \u003d\u003d \"9\"):\n        return \"R_X_%s\" %creativeType\n    else:\n        return \"NR_X_%s\" %creativeType\n    \n\nplacementAndCreative_udf \u003d F.udf(placementAndCreativeMap, StringType())\n\nrawData \u003d rawData.withColumn(\"placementAndCreative\",  placementAndCreative_udf(\u0027ad_type\u0027, \u0027creative_type\u0027))\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:30:23 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512352016945_1067533342",
+      "id": "20171204-014656_1139064774_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Dec 4, 2017 1:46:56 AM",
+      "dateStarted": "Dec 4, 2017 10:30:23 PM",
+      "dateFinished": "Dec 4, 2017 10:30:23 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#ipm score\n\ndef ipmMap(impScore):\n    defaultIpmScore \u003d \"-1\"\n    if ipmScore \u003c\u003d 0:\n        return defaultIpmScore\n    else:\n        adjustedScore \u003d ipmScore * 1000\n    if adjustedScore \u003c 3.0:\n        return str(int(adjustedScore / 0.3)) + \"x0.3\"\n    elif adjustedScore \u003c 4.0:\n        return \"3+\" + str(int((adjustedScore - 3.0) / 0.2)) + \"x0.2\"\n    elif adjustedScore \u003c 12:\n        return str(int(adjustedScore))\n    else:\n        return \"12+\"\n    \nipm_udf \u003d F.udf(ipmMap, StringType())\n\nrawData \u003d rawData.withColumn(\"ipmScore\", deviceAppImpr_udf(\u0027ipm_score\u0027))\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:30:25 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512352018895_-2117048628",
+      "id": "20171204-014658_131467020_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Dec 4, 2017 1:46:58 AM",
+      "dateStarted": "Dec 4, 2017 10:30:25 PM",
+      "dateFinished": "Dec 4, 2017 10:30:25 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#impression recency\n\ndef lastImpressionRecency(lastImpTs, impTs):\n    defaultRecencyValue \u003d \"-1\"\n    diffSeconds \u003d impTs - lastImpTs\n    diffHour \u003d int(diffSeconds / 3600 + 1)\n    diffDay \u003d int(diffHour / 24 + 1)\n    if (lastImpTs \u003c 0 or diffSeconds \u003c\u003d 0):\n        return defaultRecencyValue\n    elif (lastImpTs \u003d\u003d 0):\n        return \"error_val\"\n    else:\n        if (diffSeconds \u003c\u003d 300):\n            return \"1st_5min\"\n        elif (diffHour \u003c\u003d 1):\n            return str(diffHour) + \"_hour\"\n        elif (diffDay \u003c\u003d 10):\n            return str(diffDay) + \"_day\"\n        else:\n            return \"10+_days\"\n            \nlastImpressionRecency_udf \u003d F.udf(lastImpressionRecency, StringType())\n\nrawData \u003d rawData.withColumn(\"lastImpressionRecency\", lastImpressionRecency_udf(\u0027adv_app_last_impression_ts\u0027, \u0027impression_ts\u0027))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:39:25 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512426210780_-313270205",
+      "id": "20171204-222330_924080509_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Dec 4, 2017 10:23:30 PM",
+      "dateStarted": "Dec 4, 2017 10:39:25 PM",
+      "dateFinished": "Dec 4, 2017 10:39:25 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#click recency\n \ndef lastClickRecency(lastClickTs, impTs):\n    defaultRecencyValue \u003d \"-1\"\n    diffSeconds \u003d impTs - lastClickTs\n    diffHourt \u003d int(diffSeconds / 3600 + 1)\n    diffDay \u003d int(diffHour / 24 + 1)\n    if (lastClickTs \u003c 0 or diffSeconds \u003c\u003d 0):\n        return defaultRecencyValue\n    elif (lct \u003d\u003d 0):\n        return \"error_val\"\n    else:\n        if (diffHour \u003c\u003d 1):\n            return str(diffHour) + \"_hour\"\n        elif (diffDay \u003c\u003d 15):\n            return str(diffDay) + \"_day\"\n        else:\n            return \"15+_days\"\n            \nlastClickRecency_udf \u003d F.udf(lastClickRecency, StringType())\n\nrawData \u003d rawData.withColumn(\"lastClickRecency\", lastClickRecency_udf(\u0027adv_app_last_click_ts\u0027, \u0027impression_ts\u0027))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:39:28 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512426233194_-23538959",
+      "id": "20171204-222353_523610409_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Dec 4, 2017 10:23:53 PM",
+      "dateStarted": "Dec 4, 2017 10:39:28 PM",
+      "dateFinished": "Dec 4, 2017 10:39:28 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nrawData \u003d rawData.withColumn(\u0027advertiser_app\u0027,F.lower(rawData.advertiser_app)) \\\n    .withColumn(\u0027publisher_app\u0027,F.lower(rawData.publisher_app)) \\\n    .withColumn(\u0027reachability\u0027,F.lower(rawData.reachability)) \\\n    .withColumn(\u0027modelId\u0027,F.lower(rawData.modelId)) \\\n       .withColumn(\u0027country\u0027,F.lower(rawData.country)) \\\n       .withColumn(\u0027placementAndCreative\u0027,F.lower(rawData.placementAndCreative))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:39:58 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512426323904_1607951264",
+      "id": "20171204-222523_1434758468_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Dec 4, 2017 10:25:23 PM",
+      "dateStarted": "Dec 4, 2017 10:39:58 PM",
+      "dateFinished": "Dec 4, 2017 10:39:58 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#concatenate columns and create cross features\n\nconcat_udf \u003d F.udf(lambda cols: \"_X_\".join([x if x is not None else \"unknown\" for x in cols]), StringType())\n\nrawData \u003d rawData.withColumn(\"advertiserAppXPublisherApp\", concat_udf(F.array(\"advertiser_app\", \"publisher_app\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXReachability\", concat_udf(F.array(\"advertiser_app\", \"reachability\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXCountry\", concat_udf(F.array(\"advertiser_app\", \"country\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXModelId\", concat_udf(F.array(\"advertiser_app\", \"modelId\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXPublisherApp\", concat_udf(F.array(\"advertiser_app\", \"placementAndCreative\", \"publisher_app\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXReachability\", concat_udf(F.array(\"advertiser_app\", \"placementAndCreative\",  \"reachability\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXModelId\", concat_udf(F.array(\"advertiser_app\", \"placementAndCreative\", \"modelId\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXCountry\", concat_udf(F.array(\"advertiser_app\", \"placementAndCreative\", \"country\")))\n\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:40:01 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1511393013386_83034148",
+      "id": "20171122-232333_1196409035_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 22, 2017 11:23:33 PM",
+      "dateStarted": "Dec 4, 2017 10:40:01 PM",
+      "dateFinished": "Dec 4, 2017 10:40:01 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nrawData.head(1)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:35:22 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512354131407_-435862333",
+      "id": "20171204-022211_376543626_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "[Row(advertiser_app\u003du\u002757e649d004b016251663a3c5\u0027, publisher_app\u003du\u002757c062b7f6cd451202e0ce7a\u0027, has_install\u003d0, has_click\u003d0, reachability\u003d1, country\u003du\u0027RU\u0027, ad_type\u003d1, advertiser_campaign\u003du\u002759aed7ee04b016546b6ae3cd\u0027, advertiser_condition_set\u003du\u0027108d104b-e1e7-430b-8863-f16ae1ea14b4\u0027, device_advertising_app_impressions\u003d2, os\u003du\u0027Android 5.1.1\u0027, impression_dt\u003du\u00272017-11-11\u0027, impression_ts\u003d1510422899, local_time\u003du\u00270954\u0027, adv_app_last_impression_ts\u003d1510422799, adv_app_last_click_ts\u003d1510422732, ipm_score\u003d0.0040149204432964325, bid_value\u003d0.10000000149011612, creative_type\u003du\u00271\u0027, app_platform\u003d2, impression_id\u003du\u00270003cf594f716581a4e250fa0b178556311e89ed\u0027, affinity\u003d0.0, modelId\u003du\u0027android\u0027, deviceAppImpressions\u003du\u00270\u0027, placementAndCreative\u003du\u0027NR_X_1\u0027, ipmScore\u003du\u002730\u0027, advertiserAppXPublisherApp\u003du\u002757e649d004b016251663a3c5_X_57c062b7f6cd451202e0ce7a\u0027, advertiserAppXReachability\u003du\u002757e649d004b016251663a3c5_X_1\u0027, advertiserAppXCountry\u003du\u002757e649d004b016251663a3c5_X_RU\u0027, advertiserAppXModelId\u003du\u002757e649d004b016251663a3c5_X_android\u0027, advertiserAppXplacementAndCreativeXPublisherApp\u003du\u002757e649d004b016251663a3c5_X_NR_X_1_X_57c062b7f6cd451202e0ce7a\u0027, advertiserAppXplacementAndCreativeXReachability\u003du\u002757e649d004b016251663a3c5_X_NR_X_1_X_1\u0027, advertiserAppXplacementAndCreativeXModelId\u003du\u002757e649d004b016251663a3c5_X_NR_X_1_X_android\u0027, advertiserAppXplacementAndCreativeXCountry\u003du\u002757e649d004b016251663a3c5_X_NR_X_1_X_RU\u0027)]\n"
+      },
+      "dateCreated": "Dec 4, 2017 2:22:11 AM",
+      "dateStarted": "Dec 4, 2017 2:35:22 AM",
+      "dateFinished": "Dec 4, 2017 2:35:53 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#frequency filtering\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027publisher_app\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"publisher_app_count\",createCount_udf(\u0027publisher_app\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027publisher_app_reduced\u0027, createNewColFromTwo(\u0027publisher_app\u0027,\u0027publisher_app_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027reachability\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"reachability_count\",createCount_udf(\u0027reachability\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027reachability_reduced\u0027, createNewColFromTwo(\u0027reachability\u0027,\u0027reachability_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027country\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"country_count\",createCount_udf(\u0027country\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027country_reduced\u0027, createNewColFromTwo(\u0027country\u0027,\u0027country_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027modelId\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"modelId_count\",createCount_udf(\u0027modelId\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027modelId_reduced\u0027, createNewColFromTwo(\u0027modelId\u0027,\u0027modelId_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027placementAndCreative\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"placementAndCreative_count\",createCount_udf(\u0027placementAndCreative\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027placementAndCreative_reduced\u0027, createNewColFromTwo(\u0027placementAndCreative\u0027,\u0027placementAndCreative_count\u0027))\n\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:40:10 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "JOB UI",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d64",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d65",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d66",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d67",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d68",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d69",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d70",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d71",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d72",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d73"
+          ],
+          "interpreterSettingId": "2CPMXN5K1null1501659668571"
+        }
+      },
+      "jobName": "paragraph_1511815443965_135125407",
+      "id": "20171127-204403_1438202676_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 27, 2017 8:44:03 PM",
+      "dateStarted": "Dec 4, 2017 10:40:11 PM",
+      "dateFinished": "Dec 4, 2017 10:46:19 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027advertiserAppXPublisherApp\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"advertiserAppXPublisherApp_count\",createCount_udf(\u0027advertiserAppXPublisherApp\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027advertiserAppXPublisherApp_reduced\u0027, createNewColFromTwo(\u0027advertiserAppXPublisherApp\u0027,\u0027advertiserAppXPublisherApp_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027advertiserAppXReachability\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"advertiserAppXReachability_count\",createCount_udf(\u0027advertiserAppXReachability\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027advertiserAppXReachability_reduced\u0027, createNewColFromTwo(\u0027advertiserAppXReachability\u0027,\u0027advertiserAppXReachability_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027advertiserAppXCountry\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"advertiserAppXCountry_count\",createCount_udf(\u0027advertiserAppXCountry\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027advertiserAppXCountry_reduced\u0027, createNewColFromTwo(\u0027advertiserAppXCountry\u0027,\u0027advertiserAppXCountry_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027advertiserAppXModelId\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"advertiserAppXModelId_count\",createCount_udf(\u0027advertiserAppXModelId\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027advertiserAppXModelId_reduced\u0027, createNewColFromTwo(\u0027advertiserAppXModelId\u0027,\u0027advertiserAppXModelId_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027advertiserAppXplacementAndCreativeXPublisherApp\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXPublisherApp_count\",createCount_udf(\u0027advertiserAppXplacementAndCreativeXPublisherApp\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027advertiserAppXplacementAndCreativeXPublisherApp_reduced\u0027, createNewColFromTwo(\u0027advertiserAppXplacementAndCreativeXPublisherApp\u0027,\u0027advertiserAppXplacementAndCreativeXPublisherApp_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027advertiserAppXplacementAndCreativeXReachability\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXReachability_count\",createCount_udf(\u0027advertiserAppXplacementAndCreativeXReachability\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027advertiserAppXplacementAndCreativeXReachability_reduced\u0027, createNewColFromTwo(\u0027advertiserAppXplacementAndCreativeXReachability\u0027,\u0027advertiserAppXplacementAndCreativeXReachability_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027advertiserAppXplacementAndCreativeXModelId\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXModelId_count\",createCount_udf(\u0027advertiserAppXplacementAndCreativeXModelId\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027advertiserAppXplacementAndCreativeXModelId_reduced\u0027, createNewColFromTwo(\u0027advertiserAppXplacementAndCreativeXModelId\u0027,\u0027advertiserAppXplacementAndCreativeXModelId_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027advertiserAppXplacementAndCreativeXCountry\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXCountry_count\",createCount_udf(\u0027advertiserAppXplacementAndCreativeXCountry\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027advertiserAppXplacementAndCreativeXCountry_reduced\u0027, createNewColFromTwo(\u0027advertiserAppXplacementAndCreativeXCountry\u0027,\u0027advertiserAppXplacementAndCreativeXCountry_count\u0027))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:49:49 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "JOB UI",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d74",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d75",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d76",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d77",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d78",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d79",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d80",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d81",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d82",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d83",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d84",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d85",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d86",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d87",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d88",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d89"
+          ],
+          "interpreterSettingId": "2CPMXN5K1null1501659668571"
+        }
+      },
+      "jobName": "paragraph_1512355859384_2000085813",
+      "id": "20171204-025059_706029569_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Dec 4, 2017 2:50:59 AM",
+      "dateStarted": "Dec 4, 2017 10:49:49 PM",
+      "dateFinished": "Dec 4, 2017 10:58:49 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\ncolumn_vec_in \u003d [\u0027advertiser_app\u0027, \u0027publisher_app_reduced\u0027, \u0027reachability_reduced\u0027, \u0027country_reduced\u0027, \u0027modelId_reduced\u0027, \u0027placementAndCreative_reduced\u0027, \u0027advertiserAppXPublisherApp_reduced\u0027, \u0027advertiserAppXReachability_reduced\u0027, \u0027advertiserAppXCountry_reduced\u0027, \u0027advertiserAppXModelId_reduced\u0027, \u0027advertiserAppXplacementAndCreativeXPublisherApp_reduced\u0027, \u0027advertiserAppXplacementAndCreativeXReachability_reduced\u0027,\u0027advertiserAppXplacementAndCreativeXModelId_reduced\u0027, \u0027advertiserAppXplacementAndCreativeXCountry_reduced\u0027, \u0027deviceAppImpressions\u0027, \u0027ipmScore\u0027, \u0027lastImpressionRecency\u0027, \u0027lastClickRecency\u0027]\n\ncolumn_vec_out \u003d [\u0027advertiserApp_catVec\u0027, \u0027publisher_app_catVec\u0027, \u0027reachability_catVec\u0027, \u0027country_catVec\u0027, \u0027modelId_catVec\u0027, \u0027placementAndCreative_catVec\u0027,\u0027advertiserAppXPublisherApp_catVec\u0027, \u0027advertiserAppXReachability_catVec\u0027, \u0027advertiserAppXCountry_catVec\u0027, \u0027advertiserAppXModelId_catVec\u0027, \u0027advertiserAppXplacementAndCreativeXPublisherApp_catVec\u0027,\u0027advertiserAppXplacementAndCreativeXReachability_catVec\u0027,\u0027advertiserAppXplacementAndCreativeXModelId_catVec\u0027, \u0027advertiserAppXplacementAndCreativeXCountry_catVec\u0027, \u0027deviceAppImpressions_catVec\u0027, \u0027ipmScore_catVec\u0027, \u0027lastImpressionRecency_catVec\u0027, \u0027lastClickRecency_catVec\u0027]\n \nindexers \u003d [StringIndexer(inputCol\u003dx, outputCol\u003dx+\u0027_tmp\u0027) for x in column_vec_in ]\n \nencoders \u003d [OneHotEncoder(dropLast\u003dFalse, inputCol\u003dx+\"_tmp\", outputCol\u003dy)\nfor x,y in zip(column_vec_in, column_vec_out)]\n\ntmp \u003d [[i,j] for i,j in zip(indexers, encoders)]\n\ntmp \u003d [i for sublist in tmp for i in sublist]",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:27:07 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1511819879777_-404349511",
+      "id": "20171127-215759_1309562145_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 27, 2017 9:57:59 PM",
+      "dateStarted": "Dec 4, 2017 9:24:41 PM",
+      "dateFinished": "Dec 4, 2017 9:24:41 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n# prepare labeled sets\n\ncols_now \u003d [\u0027advertiserApp_catVec\u0027, \u0027publisher_app_catVec\u0027, \u0027reachability_catVec\u0027, \u0027country_catVec\u0027, \u0027modelId_catVec\u0027, \u0027placementAndCreative_catVec\u0027, \u0027advertiserAppXPublisherApp_catVec\u0027, \u0027advertiserAppXReachability_catVec\u0027, \u0027advertiserAppXCountry_catVec\u0027, \u0027advertiserAppXModelId_catVec\u0027, \u0027advertiserAppXplacementAndCreativeXPublisherApp_catVec\u0027, \u0027advertiserAppXplacementAndCreativeXReachability_catVec\u0027,\u0027advertiserAppXplacementAndCreativeXModelId_catVec\u0027, \u0027advertiserAppXplacementAndCreativeXCountry_catVec\u0027,\u0027deviceAppImpressions_catVec\u0027, \u0027ipmScore_catVec\u0027]\n\nassembler_features \u003d VectorAssembler(inputCols\u003dcols_now, outputCol\u003d\u0027features\u0027)\n\nlabelIndexer \u003d StringIndexer(inputCol\u003d\u0027has_install\u0027, outputCol\u003d\"label\")\n\ntmp +\u003d [assembler_features, labelIndexer]\npipeline \u003d Pipeline(stages\u003dtmp)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 9:24:44 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512026350858_-486805392",
+      "id": "20171130-071910_1708012504_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 30, 2017 7:19:10 AM",
+      "dateStarted": "Dec 4, 2017 9:24:44 PM",
+      "dateFinished": "Dec 4, 2017 9:24:44 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nrawData.head(1)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:16:22 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "JOB UI",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d62",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d63"
+          ],
+          "interpreterSettingId": "2CPMXN5K1null1501659668571"
+        }
+      },
+      "jobName": "paragraph_1512425770899_1317480645",
+      "id": "20171204-221610_1878964112_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "[Row(advertiser_app\u003du\u002757e649d004b016251663a3c5\u0027, publisher_app\u003du\u002757c062b7f6cd451202e0ce7a\u0027, has_install\u003d0, has_click\u003d0, reachability\u003du\u00271\u0027, country\u003du\u0027ru\u0027, ad_type\u003d1, advertiser_campaign\u003du\u002759aed7ee04b016546b6ae3cd\u0027, advertiser_condition_set\u003du\u0027108d104b-e1e7-430b-8863-f16ae1ea14b4\u0027, device_advertising_app_impressions\u003d2, os\u003du\u0027Android 5.1.1\u0027, impression_dt\u003du\u00272017-11-11\u0027, impression_ts\u003d1510422899, local_time\u003du\u00270954\u0027, adv_app_last_impression_ts\u003d1510422799, adv_app_last_click_ts\u003d1510422732, ipm_score\u003d0.0040149204432964325, bid_value\u003d0.10000000149011612, creative_type\u003du\u00271\u0027, app_platform\u003d2, impression_id\u003du\u00270003cf594f716581a4e250fa0b178556311e89ed\u0027, affinity\u003d0.0, modelId\u003du\u0027android\u0027, deviceAppImpressions\u003du\u00270\u0027, placementAndCreative\u003du\u0027nr_x_1\u0027, ipmScore\u003du\u002730\u0027, advertiserAppXPublisherApp\u003du\u002757e649d004b016251663a3c5_x_57c062b7f6cd451202e0ce7a\u0027, advertiserAppXReachability\u003du\u002757e649d004b016251663a3c5_x_1\u0027, advertiserAppXCountry\u003du\u002757e649d004b016251663a3c5_x_ru\u0027, advertiserAppXModelId\u003du\u002757e649d004b016251663a3c5_x_android\u0027, advertiserAppXplacementAndCreativeXPublisherApp\u003du\u002757e649d004b016251663a3c5_x_nr_x_1_x_57c062b7f6cd451202e0ce7a\u0027, advertiserAppXplacementAndCreativeXReachability\u003du\u002757e649d004b016251663a3c5_x_nr_x_1_x_1\u0027, advertiserAppXplacementAndCreativeXModelId\u003du\u002757e649d004b016251663a3c5_x_nr_x_1_x_android\u0027, advertiserAppXplacementAndCreativeXCountry\u003du\u002757e649d004b016251663a3c5_x_nr_x_1_x_ru\u0027, publisher_app_count\u003du\u0027279023\u0027, publisher_app_reduced\u003du\u002757c062b7f6cd451202e0ce7a\u0027, reachability_count\u003du\u0027275353354\u0027, reachability_reduced\u003du\u00271\u0027, country_count\u003du\u002724321836\u0027, country_reduced\u003du\u0027ru\u0027, modelId_count\u003du\u0027307401553\u0027, modelId_reduced\u003du\u0027android\u0027, placementAndCreative_count\u003du\u0027170247489\u0027, placementAndCreative_reduced\u003du\u0027nr_x_1\u0027, advertiserAppXPublisherApp_count\u003du\u002753070\u0027, advertiserAppXPublisherApp_reduced\u003du\u002757e649d004b016251663a3c5_x_57c062b7f6cd451202e0ce7a\u0027, advertiserAppXReachability_count\u003du\u002728081206\u0027, advertiserAppXReachability_reduced\u003du\u002757e649d004b016251663a3c5_x_1\u0027, advertiserAppXCountry_count\u003du\u00271839253\u0027, advertiserAppXCountry_reduced\u003du\u002757e649d004b016251663a3c5_x_ru\u0027, advertiserAppXModelId_count\u003du\u002746215035\u0027, advertiserAppXModelId_reduced\u003du\u002757e649d004b016251663a3c5_x_android\u0027, advertiserAppXplacementAndCreativeXPublisherApp_count\u003du\u002718020\u0027, advertiserAppXplacementAndCreativeXPublisherApp_reduced\u003du\u002757e649d004b016251663a3c5_x_nr_x_1_x_57c062b7f6cd451202e0ce7a\u0027, advertiserAppXplacementAndCreativeXReachability_count\u003du\u00279375377\u0027, advertiserAppXplacementAndCreativeXReachability_reduced\u003du\u002757e649d004b016251663a3c5_x_nr_x_1_x_1\u0027, advertiserAppXplacementAndCreativeXModelId_count\u003du\u002714838214\u0027, advertiserAppXplacementAndCreativeXModelId_reduced\u003du\u002757e649d004b016251663a3c5_x_nr_x_1_x_android\u0027, advertiserAppXplacementAndCreativeXCountry_count\u003du\u0027306066\u0027, advertiserAppXplacementAndCreativeXCountry_reduced\u003du\u002757e649d004b016251663a3c5_x_nr_x_1_x_ru\u0027)]\n"
+      },
+      "dateCreated": "Dec 4, 2017 10:16:10 PM",
+      "dateStarted": "Dec 4, 2017 10:16:22 PM",
+      "dateFinished": "Dec 4, 2017 10:20:02 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\ntrainData \u003d rawData.filter(impression_dt!\u003dendDate)\ntestData \u003d rawData.filter(impression_dt \u003d\u003d endDate)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:29:06 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512426068236_516263224",
+      "id": "20171204-222108_1713338353_q_E6PEPTAPMS1511377090",
+      "dateCreated": "Dec 4, 2017 10:21:08 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\ntrainingData \u003d pipeline.fit(trainData).transform(trainData)\ntestingData \u003d pipeline.fit(testData).transform(testData)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:29:36 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "JOB UI",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d26",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d27",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d28",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d29",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d30",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d31",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d32",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d33",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d34",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d35",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d36",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d37",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d38",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d39",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d40",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d41",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d42",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d43",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d44",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d45",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d46",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d47",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d48",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d49",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d50",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d51",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d52",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d53",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d54",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d55",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d56",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d57",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d58",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d59"
+          ],
+          "interpreterSettingId": "2CPMXN5K1null1501659668571"
+        }
+      },
+      "jobName": "paragraph_1512026495595_2115803090",
+      "id": "20171130-072135_92090484_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 30, 2017 7:21:35 AM",
+      "dateStarted": "Dec 4, 2017 9:24:47 PM",
+      "dateFinished": "Dec 4, 2017 9:50:58 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n#allData.cache()\n\ntrainingData, testData \u003d allData.randomSplit([0.7,0.3], seed\u003d0) # need to ensure same split for each time\n\nprint(\"Distribution of Pos and Neg in trainingData is: \", trainingData.groupBy(\"label\").count().show())\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 9:56:05 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "JOB UI",
+          "tooltip": "View in Spark web UI",
+          "group": "spark",
+          "values": [
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d60",
+            "https://api.qubole.com/cluster-proxy?encodedUrl\u003dhttp%3A%2F%2Fec2-54-87-140-180.compute-1.amazonaws.com%3A8088%2Fproxy%2Fapplication_1512417944966_0001/jobs/job?spark\u003dtrue\u0026id\u003d61"
+          ],
+          "interpreterSettingId": "2CPMXN5K1null1501659668571"
+        }
+      },
+      "jobName": "paragraph_1512026533977_-1331885831",
+      "id": "20171130-072213_1461894513_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-5490089014968380768.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-5490089014968380768.py\", line 277, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 2, in \u003cmodule\u003e\n  File \"/usr/lib/spark/python/pyspark/sql/dataframe.py\", line 318, in show\n    print(self._jdf.showString(n, 20))\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1131, in __call__\n    answer \u003d self.gateway_client.send_command(command)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 883, in send_command\n    response \u003d connection.send_command(command)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1028, in send_command\n    answer \u003d smart_decode(self.stream.readline()[:-1])\n  File \"/usr/lib64/python2.7/socket.py\", line 451, in readline\n    data \u003d self._sock.recv(self._rbufsize)\n  File \"/usr/lib/spark/python/pyspark/context.py\", line 236, in signal_handler\n    raise KeyboardInterrupt()\nKeyboardInterrupt\n\n"
+      },
+      "dateCreated": "Nov 30, 2017 7:22:13 AM",
+      "dateStarted": "Dec 4, 2017 9:56:05 PM",
+      "dateFinished": "Dec 4, 2017 10:16:02 PM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nlr \u003d LogisticRegression(maxIter \u003d 50, regParam \u003d 0.0001, elasticNetParam \u003d 1e-4)\n\nlrModel \u003d lr.fit(trainingData)\n\ntransformed \u003d fit.transform(testingData)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:29:51 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512082902256_-1967622346",
+      "id": "20171130-230142_1208486550_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 272, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 2, in \u003cmodule\u003e\n  File \"/usr/lib/spark/python/pyspark/ml/base.py\", line 64, in fit\n    return self._fit(dataset)\n  File \"/usr/lib/spark/python/pyspark/ml/wrapper.py\", line 236, in _fit\n    java_model \u003d self._fit_java(dataset)\n  File \"/usr/lib/spark/python/pyspark/ml/wrapper.py\", line 233, in _fit_java\n    return self._java_obj.fit(dataset._jdf)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1131, in __call__\n    answer \u003d self.gateway_client.send_command(command)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 883, in send_command\n    response \u003d connection.send_command(command)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1028, in send_command\n    answer \u003d smart_decode(self.stream.readline()[:-1])\n  File \"/usr/lib64/python2.7/socket.py\", line 451, in readline\n    data \u003d self._sock.recv(self._rbufsize)\n  File \"/usr/lib/spark/python/pyspark/context.py\", line 236, in signal_handler\n    raise KeyboardInterrupt()\nKeyboardInterrupt\n\n"
+      },
+      "dateCreated": "Nov 30, 2017 11:01:42 PM",
+      "dateStarted": "Dec 4, 2017 1:53:43 AM",
+      "dateFinished": "Dec 4, 2017 2:17:16 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n#rf \u003d RF(labelCol\u003d\u0027label\u0027, featuresCol\u003d\u0027features\u0027,numTrees\u003d200)\n\n#fit \u003d rf.fit(trainingData)\n\n#transformed \u003d fit.transform(testData)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 1:19:45 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512026553814_388942757",
+      "id": "20171130-072233_1662606683_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Nov 30, 2017 7:22:33 AM",
+      "dateStarted": "Dec 4, 2017 2:13:25 AM",
+      "dateFinished": "Dec 4, 2017 2:17:16 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nprint(\"Coefficients: \" + str(lrModel.coefficients))\nprint(\"Intercept: \" + str(lrModel.intercept))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 1:19:45 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512200238132_1922314042",
+      "id": "20171202-073718_759111799_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 272, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 1, in \u003cmodule\u003e\nNameError: name \u0027lrModel\u0027 is not defined\n\n"
+      },
+      "dateCreated": "Dec 2, 2017 7:37:18 AM",
+      "dateStarted": "Dec 4, 2017 2:17:16 AM",
+      "dateFinished": "Dec 4, 2017 2:17:16 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\ntrainingSummary \u003d lrModel.summary\n\n# Obtain the objective per iteration\nobjectiveHistory \u003d trainingSummary.objectiveHistory\n\nprint(\"objectiveHistory:\")\n\nfor objective in objectiveHistory:\n    print(objective)\n\n# Obtain the receiver-operating characteristic as a dataframe and areaUnderROC.\ntrainingSummary.roc.show()\n\nprint(\"areaUnderROC: \" + str(trainingSummary.areaUnderROC))\n\n# Set the model threshold to maximize F-Measure\nfMeasure \u003d trainingSummary.fMeasureByThreshold\n\nmaxFMeasure \u003d fMeasure.groupBy().max(\u0027F-Measure\u0027).select(\u0027max(F-Measure)\u0027).head()\nbestThreshold \u003d fMeasure.where(fMeasure[\u0027F-Measure\u0027] \u003d\u003d maxFMeasure[\u0027max(F-Measure)\u0027]) \\\n    .select(\u0027threshold\u0027).head()[\u0027threshold\u0027]\n    \nlr.setThreshold(bestThreshold)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 1:19:45 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512200275661_487462800",
+      "id": "20171202-073755_1842256665_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 272, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 1, in \u003cmodule\u003e\nNameError: name \u0027lrModel\u0027 is not defined\n\n"
+      },
+      "dateCreated": "Dec 2, 2017 7:37:55 AM",
+      "dateStarted": "Dec 4, 2017 2:17:16 AM",
+      "dateFinished": "Dec 4, 2017 2:17:16 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nresults \u003d transformed.select([\u0027probability\u0027, \u0027label\u0027])\n \n## prepare score-label set\nresults_collect \u003d results.collect()\n\nresults_list \u003d [(float(i[0][0]), 1.0-float(i[1])) for i in results_collect]\n\nscoreAndLabels \u003d sc.parallelize(results_list)\n \nmetrics \u003d metric(scoreAndLabels)\n\nprint(\"The ROC score is (@numTrees\u003d200): \", metrics.areaUnderROC)\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 1:19:45 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512026572086_1417422540",
+      "id": "20171130-072252_1679731402_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 272, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 1, in \u003cmodule\u003e\nNameError: name \u0027transformed\u0027 is not defined\n\n"
+      },
+      "dateCreated": "Nov 30, 2017 7:22:52 AM",
+      "dateStarted": "Dec 4, 2017 2:17:16 AM",
+      "dateFinished": "Dec 4, 2017 2:17:16 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nfrom sklearn.metrics import roc_curve, auc\nimport matplotlib\n \nfpr \u003d dict()\ntpr \u003d dict()\nroc_auc \u003d dict()\n \ny_test \u003d [i[1] for i in results_list]\ny_score \u003d [i[0] for i in results_list]\n \nfpr, tpr, _ \u003d roc_curve(y_test, y_score)\nroc_auc \u003d auc(fpr, tpr)\n \n\nplt.figure()\nplt.plot(fpr, tpr, label\u003d\u0027ROC curve (area \u003d %0.2f)\u0027 % roc_auc)\nplt.plot([0, 1], [0, 1], \u0027k--\u0027)\nplt.xlim([0.0, 1.0])\nplt.ylim([0.0, 1.05])\nplt.xlabel(\u0027False Positive Rate\u0027)\nplt.ylabel(\u0027True Positive Rate\u0027)\nplt.title(\u0027Receiver operating characteristic example\u0027)\nplt.legend(loc\u003d\"lower right\")\nplt.show()",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 1:19:46 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512026643046_-1000831567",
+      "id": "20171130-072403_196242743_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 272, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 2, in \u003cmodule\u003e\nImportError: No module named matplotlib\n\n"
+      },
+      "dateCreated": "Nov 30, 2017 7:24:03 AM",
+      "dateStarted": "Dec 4, 2017 2:17:16 AM",
+      "dateFinished": "Dec 4, 2017 2:17:18 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 1:19:46 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512246871979_530260908",
+      "id": "20171202-203431_186177888_q_E6PEPTAPMS1511377090",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Dec 2, 2017 8:34:31 PM",
+      "dateStarted": "Dec 4, 2017 2:17:17 AM",
+      "dateFinished": "Dec 4, 2017 2:17:17 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    }
+  ],
+  "name": "AdRelModel",
+  "id": "E6PEPTAPMS1511377090",
+  "angularObjects": {
+    "2CSGYZQ6Gnull1501659668586:shared_process": [],
+    "2CPMXN5K1null1501659668571:shared_process": [],
+    "2CP3E3U35null1501659668597:shared_process": [],
+    "2CSEYEG4Ynull1501659668591:shared_process": []
+  },
+  "config": {
+    "isDashboard": false
+  },
+  "info": {},
+  "source": "FCN"
+}
