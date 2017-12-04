@@ -1,0 +1,703 @@
+{
+  "paragraphs": [
+    {
+      "text": "%pyspark\nimport optparse\nfrom pyspark.sql import SparkSession\nimport pyspark.sql.functions as F\nfrom pyspark.sql.functions import *\nfrom pyspark.sql.functions import udf\nfrom pyspark.sql.types import StringType\nfrom pyspark.ml import Pipeline\nfrom pyspark.ml.classification import RandomForestClassifier as RF\nfrom pyspark.ml.feature import StringIndexer, VectorIndexer, VectorAssembler, SQLTransformer\nfrom pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator\nfrom pyspark.ml.tuning import CrossValidator, ParamGridBuilder\nfrom pyspark.mllib.evaluation import BinaryClassificationMetrics as metric\nimport numpy as np\nimport functools\nfrom pyspark.ml.feature import OneHotEncoder\nimport pyspark.sql.functions as F\nfrom pyspark.sql.types import StringType\n\n\nspark \u003d SparkSession\\\n    .builder\\\n    .appName(\"PythonSQL\")\\\n    .config(\"spark.some.config.option\", \"some-value\")\\\n    .getOrCreate()",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1505414618112_-1629229988",
+      "id": "20170914-184338_1144559892_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Sep 14, 2017 6:43:38 PM",
+      "dateStarted": "Dec 4, 2017 2:58:06 AM",
+      "dateFinished": "Dec 4, 2017 3:06:01 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#reading the input data\n\nparser \u003d optparse.OptionParser()\nparser.add_option(\"-S\", \"--startDate\", type\u003d\"string\", dest\u003d\"startDate\",\n                    help\u003d\"start date of input data\",\n                    default\u003d\"2017-11-10\"\n                    )\n                    \nparser.add_option(\"-E\", \"--endDate\", type\u003d\"string\", dest\u003d\"endDate\",\n                    help\u003d\"end date of input data\",\n                    default\u003d\"2017-11-15\"\n                    )                    \n\n(opts, args) \u003d parser.parse_args()\n\nstartDate \u003d opts.startDate\nendDate \u003d opts.endDate\n\nquery \u003d \"select has_install, has_click, publisher_app, reachability, country, model_id, ad_type, advertiser_app, advertiser_campaign,advertiser_condition_set, device_advertising_app_impressions,os,impression_dt, impression_ts, local_time, adv_app_last_impression_ts, adv_app_last_click_ts, ipm_score, bid_value, creative_type, app_platform, impression_id, impression_dt from adrel.impressions_enhanced where impression_dt \u003e \u0027%s\u0027 AND impression_dt \u003c\u003d \u0027%s\u0027 AND ad_type IN (1,3,4,5,8,9) AND advertising_campaign_type \u003d 3 AND advertiser_campaign IS NOT NULL AND advertiser_condition_set IS NOT NULL\" %(startDate, endDate)\n\naffinity_query \u003d\"select app1 as advertiser_app , app2 as publisher_app, lift_lb as affinity from device_aggr.aff_score_app2app_latest WHERE lift_lb \u003e 1\"\n\nrawData1\u003dspark.sql(query)\n\nrawData2\u003dspark.sql(affinity_query)\n\nrawData \u003d rawData1.join(broadcast(rawData2), [\"advertiser_app\", \"publisher_app\"], \"left_outer\")\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 10:26:29 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1505414675143_-1996973316",
+      "id": "20170914-184435_795678612_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Sep 14, 2017 6:44:35 PM",
+      "dateStarted": "Dec 4, 2017 3:06:01 AM",
+      "dateFinished": "Dec 4, 2017 3:06:02 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#filling missing values\n\nrawData \u003d rawData.na.fill({\u0027affinity\u0027: 0, \u0027has_install\u0027: 0, \u0027has_click\u0027: 0,  \u0027publisher_app\u0027: \u0027unknown\u0027, \u0027reachability\u0027: \u0027unknown\u0027, \u0027country\u0027: \u0027unknown\u0027, \u0027model_id\u0027: \u0027unknown\u0027, \u0027ad_type\u0027: \u0027unknown\u0027, \u0027advertiser_app\u0027: \u0027unknown\u0027,\u0027advertiser_campaign\u0027: \u0027unknown\u0027,\u0027advertiser_condition_set\u0027: \u0027unknown\u0027,\u0027device_advertising_app_impressions\u0027: 0, \u0027os\u0027: \u0027unknown\u0027, \u0027ipm_score\u0027: -1, \u0027bid_value\u0027: 0, \u0027app_platform\u0027: \u0027unknown\u0027, \u0027creative_type\u0027: \u0027-1\u0027, \u0027impression_ts\u0027 : -1, \u0027adv_app_last_impression_ts\u0027: -1, \u0027adv_app_last_click_ts\u0027: -1})\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 9:15:18 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1505415211695_2051936930",
+      "id": "20170914-185331_2066132411_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 277, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 1, in \u003cmodule\u003e\nNameError: name \u0027creative_type\u0027 is not defined\n\n"
+      },
+      "dateCreated": "Sep 14, 2017 6:53:31 PM",
+      "dateStarted": "Dec 4, 2017 3:06:02 AM",
+      "dateFinished": "Dec 4, 2017 3:06:02 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#model id mapping\n\ndef deviceIdMap(modelId):\n    defaultDeviceModel \u003d \"android\"\n    ModelMap \u003d {\n    \"ipad6\": \"iPad6\",\n    \"ipad5\": \"iPad5\",\n    \"ipad4\": \"iPad4\",\n    \"ipad3\": \"iPad3\",\n    \"ipad2\": \"iPad2\",\n    \"ipad1\": \"iPad1\",\n    \"iphone9\": \"iPhone9\",\n    \"iphone8\": \"iPhone8\",\n    \"iphone7\": \"iPhone7\",\n    \"iphone6\": \"iPhone6\",\n    \"iphone5\": \"iPhone5\",\n    \"iphone4\": \"iPhone4\",\n    \"iphone3\": \"iPhone3\",\n    \"iphone2\": \"iPhone2\",\n    \"iphone1\": \"iPhone1\",\n    \"ipod7\": \"iPod7\",\n    \"ipod6\": \"iPod6\",\n    \"ipod5\": \"iPod5\",\n    \"ipod4\": \"iPod4\",\n    \"ipod3\": \"iPod3\",\n    \"ipod2\": \"iPod2\",\n    \"ipod touch\": \"iPodTouch\",\n    \"ipad\": \"iPad\", \n    \"iphone\": \"iPhone\"\n    }\n \n    return ModelMap.get(modelId.lower().split(\",\")[0], defaultDeviceModel).lower()\n \n\nmodelMap_udf \u003d F.udf(deviceIdMap, StringType())\nrawData \u003d rawData.withColumn(\"modelId\", modelMap_udf(\u0027model_id\u0027))\nrawData \u003d rawData.drop(\u0027model_id\u0027) \n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1505794645288_-182301069",
+      "id": "20170919-041725_655764443_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Sep 19, 2017 4:17:25 AM",
+      "dateStarted": "Dec 4, 2017 3:06:02 AM",
+      "dateFinished": "Dec 4, 2017 3:06:02 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#deviceAppImpressions\n\ndeviceAppImpr_udf \u003d F.udf(lambda impressionCount: int(math.floor(math.pow(math.log(impressionCount), 2))) if impressionCount\u003e0 else \"X\", StringType())\n\nrawData \u003d rawData.withColumn(\"deviceAppImpressions\", deviceAppImpr_udf(\u0027device_advertising_app_impressions\u0027))\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1506018074099_-1461660061",
+      "id": "20170921-182114_1570604644_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Sep 21, 2017 6:21:14 PM",
+      "dateStarted": "Dec 4, 2017 3:06:02 AM",
+      "dateFinished": "Dec 4, 2017 3:06:02 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#placement and creative type\n\ndef placementAndCreativeMap(adType, creativeType):\n    if (adType \u003d\u003d \"4\" or adType \u003d\u003d \"9\"):\n        return \"R_X_%s\" %creativeType\n    else:\n        return \"NR_X_%s\" %creativeType\n    \n\nplacementAndCreative_udf \u003d F.udf(placementAndCreativeMap, StringType())\n\nrawData \u003d rawData.withColumn(\"placementAndCreative\",  placementAndCreative_udf(\u0027ad_type\u0027, \u0027creative_type\u0027))\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512350568946_-508834331",
+      "id": "20171204-012248_1739627041_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Dec 4, 2017 1:22:48 AM",
+      "dateStarted": "Dec 4, 2017 3:06:02 AM",
+      "dateFinished": "Dec 4, 2017 3:06:02 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#ipm score\n\ndef ipmMap(impScore):\n    defaultIpmScore \u003d \"-1\"\n    if ipmScore \u003c\u003d 0:\n        return defaultIpmScore\n    else:\n        adjustedScore \u003d ipmScore * 1000\n    if adjustedScore \u003c 3.0:\n        return str(int(adjustedScore / 0.3)) + \"x0.3\"\n    elif adjustedScore \u003c 4.0:\n        return \"3+\" + str(int((adjustedScore - 3.0) / 0.2)) + \"x0.2\"\n    elif adjustedScore \u003c 12:\n        return str(int(adjustedScore))\n    else:\n        return \"12+\"\n    \nipm_udf \u003d F.udf(ipmMap, StringType())\n\nrawData \u003d rawData.withColumn(\"ipmScore\", deviceAppImpr_udf(\u0027ipm_score\u0027))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512350570720_173710217",
+      "id": "20171204-012250_1837610682_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Dec 4, 2017 1:22:50 AM",
+      "dateStarted": "Dec 4, 2017 3:06:02 AM",
+      "dateFinished": "Dec 4, 2017 3:06:02 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#impression recency\n\ndef lastImpressionRecency(lastImpTs, impTs):\n    defaultRecencyValue \u003d \"-1\"\n    diffSeconds \u003d impTs - lastImpTs\n    diffHour \u003d int(diffSeconds / 3600 + 1)\n    diffDay \u003d int(diffHour / 24 + 1)\n    if (lastImpTs \u003c 0 or diffSeconds \u003c\u003d 0):\n        return defaultRecencyValue\n    elif (lastImpTs \u003d\u003d 0):\n        return \"error_val\"\n    else:\n        if (diffSeconds \u003c\u003d 300):\n            return \"1st_5min\"\n        elif (diffHour \u003c\u003d 1):\n            return str(diffHour) + \"_hour\"\n        elif (diffDay \u003c\u003d 10):\n            return str(diffDay) + \"_day\"\n        else:\n            return \"10+_days\"\n            \nlastImpressionRecency_udf \u003d F.udf(lastImpTs, impTs, StringType())\n\nrawData \u003d rawData.withColumn(\"lastImpressionRecency\", lastImpressionRecency_udf(\u0027adv_app_last_impression_ts\u0027, \u0027impression_ts\u0027))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 9:26:49 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512421812164_-1866754850",
+      "id": "20171204-211012_1143691151_q_YP4C4E8JTW1505414578",
+      "dateCreated": "Dec 4, 2017 9:10:12 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#click recency\n \ndef lastClickRecency(lastClickTs, impTs):\n    defaultRecencyValue \u003d \"-1\"\n    diffSeconds \u003d impTs - lastClickTs\n    diffHour \u003d int(diffSeconds / 3600 + 1)\n    diffDay \u003d int(diffHour / 24 + 1)\n    if (lastClickTs \u003c 0 or diffSeconds \u003c\u003d 0):\n        return defaultRecencyValue\n    elif (lct \u003d\u003d 0):\n        return \"error_val\"\n    else:\n        if (diffHour \u003c\u003d 1):\n            return str(diffHour) + \"_hour\"\n        elif (diffDay \u003c\u003d 15):\n            return str(diffDay) + \"_day\"\n        else:\n            return \"15+_days\"\n            \nlastClickRecency_udf \u003d F.udf(lastClickRecency, StringType())\n\nrawData \u003d rawData.withColumn(\"lastClickRecency\", lastClickRecency_udf(\u0027adv_app_last_click_ts\u0027, \u0027impression_ts\u0027))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 11:14:59 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512421827863_598362001",
+      "id": "20171204-211027_891703142_q_YP4C4E8JTW1505414578",
+      "dateCreated": "Dec 4, 2017 9:10:27 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nrawData \u003d rawData.withColumn(\u0027advertiser_app\u0027,F.lower(rawData.advertiser_app)) \\\n       .withColumn(\u0027publisher_app\u0027,F.lower(rawData.publisher_app)) \\\n       .withColumn(\u0027reachability\u0027,F.lower(rawData.reachability)) \\\n       .withColumn(\u0027country\u0027,F.lower(rawData.country)) \\\n       .withColumn(\u0027modelId\u0027,F.lower(rawData.modelId)) \\\n       .withColumn(\u0027placementAndCreative\u0027,F.lower(rawData.placementAndCreative))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1506026672427_1680599685",
+      "id": "20170921-204432_2090188601_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Sep 21, 2017 8:44:32 PM",
+      "dateStarted": "Dec 4, 2017 3:06:02 AM",
+      "dateFinished": "Dec 4, 2017 3:06:02 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#frequency filtering\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027publisher_app\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"publisher_app_count\",createCount_udf(\u0027publisher_app\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027publisher_app_reduced\u0027, createNewColFromTwo(\u0027publisher_app\u0027,\u0027publisher_app_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027reachability\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"reachability_count\",createCount_udf(\u0027reachability\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027reachability_reduced\u0027, createNewColFromTwo(\u0027reachability\u0027,\u0027reachability_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027country\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"country_count\",createCount_udf(\u0027country\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027country_reduced\u0027, createNewColFromTwo(\u0027country\u0027,\u0027country_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027modelId\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"modelId_count\",createCount_udf(\u0027modelId\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027modelId_reduced\u0027, createNewColFromTwo(\u0027modelId\u0027,\u0027modelId_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027placementAndCreative\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"placementAndCreative_count\",createCount_udf(\u0027placementAndCreative\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027placementAndCreative_reduced\u0027, createNewColFromTwo(\u0027placementAndCreative\u0027,\u0027placementAndCreative_count\u0027))\n\n\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512352690067_-2139951317",
+      "id": "20171204-015810_459303820_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 272, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 23, in \u003cmodule\u003e\n  File \"/usr/lib/spark/python/pyspark/sql/dataframe.py\", line 391, in collect\n    port \u003d self._jdf.collectToPython()\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/lib/spark/python/pyspark/sql/utils.py\", line 63, in deco\n    return f(*a, **kw)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/protocol.py\", line 319, in get_return_value\n    format(target_id, \".\", name), value)\nPy4JJavaError: An error occurred while calling o3098.collectToPython.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 96 in stage 162.0 failed 4 times, most recent failure: Lost task 96.3 in stage 162.0 (TID 74293, ip-172-14-6-37.ec2.internal, executor 117): org.apache.spark.api.python.PythonException: Traceback (most recent call last):\n  File \"/usr/lib/spark/python/pyspark/worker.py\", line 174, in main\n    process()\n  File \"/usr/lib/spark/python/pyspark/worker.py\", line 169, in process\n    serializer.dump_stream(func(split_index, iterator), outfile)\n  File \"/usr/lib/spark/python/pyspark/worker.py\", line 106, in \u003clambda\u003e\n    func \u003d lambda _, it: map(mapper, it)\n  File \"/usr/lib/spark/python/pyspark/worker.py\", line 92, in \u003clambda\u003e\n    mapper \u003d lambda a: udf(*a)\n  File \"/usr/lib/spark/python/pyspark/worker.py\", line 70, in \u003clambda\u003e\n    return lambda *a: f(*a)\n  File \"\u003cstdin\u003e\", line 29, in deviceIdMap\nAttributeError: \u0027NoneType\u0027 object has no attribute \u0027lower\u0027\n\n\tat org.apache.spark.api.python.PythonRunner$$anon$1.read(PythonRDD.scala:193)\n\tat org.apache.spark.api.python.PythonRunner$$anon$1.\u003cinit\u003e(PythonRDD.scala:234)\n\tat org.apache.spark.api.python.PythonRunner.compute(PythonRDD.scala:152)\n\tat org.apache.spark.sql.execution.python.BatchEvalPythonExec$$anonfun$doExecute$1.apply(BatchEvalPythonExec.scala:144)\n\tat org.apache.spark.sql.execution.python.BatchEvalPythonExec$$anonfun$doExecute$1.apply(BatchEvalPythonExec.scala:87)\n\tat org.apache.spark.rdd.RDD$$anonfun$mapPartitions$1$$anonfun$apply$23.apply(RDD.scala:796)\n\tat org.apache.spark.rdd.RDD$$anonfun$mapPartitions$1$$anonfun$apply$23.apply(RDD.scala:796)\n\tat org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:38)\n\tat org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:323)\n\tat org.apache.spark.rdd.RDD.iterator(RDD.scala:287)\n\tat org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:38)\n\tat org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:323)\n\tat org.apache.spark.rdd.RDD.iterator(RDD.scala:287)\n\tat org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:38)\n\tat org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:323)\n\tat org.apache.spark.rdd.RDD.iterator(RDD.scala:287)\n\tat org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:96)\n\tat org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:53)\n\tat org.apache.spark.scheduler.Task.run(Task.scala:99)\n\tat org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:282)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)\n\tat java.lang.Thread.run(Thread.java:745)\n\nDriver stacktrace:\n\tat org.apache.spark.scheduler.DAGScheduler.org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages(DAGScheduler.scala:1461)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1449)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1448)\n\tat scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:59)\n\tat scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:1448)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:828)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:828)\n\tat scala.Option.foreach(Option.scala:257)\n\tat org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:828)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:1676)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1631)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1620)\n\tat org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:633)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:2071)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:2084)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:2097)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:2111)\n\tat org.apache.spark.rdd.RDD$$anonfun$collect$1.apply(RDD.scala:935)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:151)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:112)\n\tat org.apache.spark.rdd.RDD.withScope(RDD.scala:362)\n\tat org.apache.spark.rdd.RDD.collect(RDD.scala:934)\n\tat org.apache.spark.sql.execution.SparkPlan.executeCollect(SparkPlan.scala:275)\n\tat org.apache.spark.sql.Dataset$$anonfun$collectToPython$1.apply$mcI$sp(Dataset.scala:2745)\n\tat org.apache.spark.sql.Dataset$$anonfun$collectToPython$1.apply(Dataset.scala:2742)\n\tat org.apache.spark.sql.Dataset$$anonfun$collectToPython$1.apply(Dataset.scala:2742)\n\tat org.apache.spark.sql.execution.SQLExecution$.withNewExecutionId(SQLExecution.scala:58)\n\tat org.apache.spark.sql.Dataset.withNewExecutionId(Dataset.scala:2765)\n\tat org.apache.spark.sql.Dataset.collectToPython(Dataset.scala:2742)\n\tat sun.reflect.GeneratedMethodAccessor111.invoke(Unknown Source)\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.lang.reflect.Method.invoke(Method.java:498)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)\n\tat py4j.Gateway.invoke(Gateway.java:280)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.GatewayConnection.run(GatewayConnection.java:214)\n\tat java.lang.Thread.run(Thread.java:745)\nCaused by: org.apache.spark.api.python.PythonException: Traceback (most recent call last):\n  File \"/usr/lib/spark/python/pyspark/worker.py\", line 174, in main\n    process()\n  File \"/usr/lib/spark/python/pyspark/worker.py\", line 169, in process\n    serializer.dump_stream(func(split_index, iterator), outfile)\n  File \"/usr/lib/spark/python/pyspark/worker.py\", line 106, in \u003clambda\u003e\n    func \u003d lambda _, it: map(mapper, it)\n  File \"/usr/lib/spark/python/pyspark/worker.py\", line 92, in \u003clambda\u003e\n    mapper \u003d lambda a: udf(*a)\n  File \"/usr/lib/spark/python/pyspark/worker.py\", line 70, in \u003clambda\u003e\n    return lambda *a: f(*a)\n  File \"\u003cstdin\u003e\", line 29, in deviceIdMap\nAttributeError: \u0027NoneType\u0027 object has no attribute \u0027lower\u0027\n\n\tat org.apache.spark.api.python.PythonRunner$$anon$1.read(PythonRDD.scala:193)\n\tat org.apache.spark.api.python.PythonRunner$$anon$1.\u003cinit\u003e(PythonRDD.scala:234)\n\tat org.apache.spark.api.python.PythonRunner.compute(PythonRDD.scala:152)\n\tat org.apache.spark.sql.execution.python.BatchEvalPythonExec$$anonfun$doExecute$1.apply(BatchEvalPythonExec.scala:144)\n\tat org.apache.spark.sql.execution.python.BatchEvalPythonExec$$anonfun$doExecute$1.apply(BatchEvalPythonExec.scala:87)\n\tat org.apache.spark.rdd.RDD$$anonfun$mapPartitions$1$$anonfun$apply$23.apply(RDD.scala:796)\n\tat org.apache.spark.rdd.RDD$$anonfun$mapPartitions$1$$anonfun$apply$23.apply(RDD.scala:796)\n\tat org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:38)\n\tat org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:323)\n\tat org.apache.spark.rdd.RDD.iterator(RDD.scala:287)\n\tat org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:38)\n\tat org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:323)\n\tat org.apache.spark.rdd.RDD.iterator(RDD.scala:287)\n\tat org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:38)\n\tat org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:323)\n\tat org.apache.spark.rdd.RDD.iterator(RDD.scala:287)\n\tat org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:96)\n\tat org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:53)\n\tat org.apache.spark.scheduler.Task.run(Task.scala:99)\n\tat org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:282)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)\n\t... 1 more\n\n\n"
+      },
+      "dateCreated": "Dec 4, 2017 1:58:10 AM",
+      "dateStarted": "Dec 4, 2017 3:06:02 AM",
+      "dateFinished": "Dec 4, 2017 3:07:34 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\ncolumn_vec_in \u003d [\u0027advertiser_app\u0027, \u0027publisher_app_reduced\u0027, \u0027reachability_reduced\u0027, \u0027country_reduced\u0027, \u0027modelId_reduced\u0027, \u0027placementAndCreative_reduced\u0027, \u0027deviceAppImpressions\u0027, \u0027ipmScore\u0027, \u0027lastImpressionRecency\u0027, \u0027lastClickRecency\u0027]\n\ncolumn_vec_out \u003d [\u0027advertiserApp_catVec\u0027, \u0027publisher_app_catVec\u0027, \u0027reachability_catVec\u0027, \u0027country_catVec\u0027, \u0027modelId_catVec\u0027, \u0027placementAndCreative_catVec\u0027,\u0027deviceAppImpressions_catVec\u0027, \u0027ipmScore_catVec\u0027, \u0027lastImpressionRecency_catVec\u0027, \u0027lastClickRecency_catVec\u0027]\n \nindexers \u003d [StringIndexer(inputCol\u003dx, outputCol\u003dx+\u0027_tmp\u0027) for x in column_vec_in ]\n \nencoders \u003d [OneHotEncoder(dropLast\u003dFalse, inputCol\u003dx+\"_tmp\", outputCol\u003dy)\nfor x,y in zip(column_vec_in, column_vec_out)]\n\ntmp \u003d [[i,j] for i,j in zip(indexers, encoders)]\n\ntmp \u003d [i for sublist in tmp for i in sublist]",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 9:33:36 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1506027197540_731956682",
+      "id": "20170921-205317_1817733450_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 265, in \u003cmodule\u003e\n    code \u003d compile(\u0027\\n\u0027.join(final_code), \u0027\u003cstdin\u003e\u0027, \u0027exec\u0027, ast.PyCF_ONLY_AST, 1)\n  File \"\u003cstdin\u003e\", line 1\n    column_vec_in \u003d [\u0027advertiser_app\u0027, \u0027publisher_app_reduced\u0027, \u0027reachability_reduced\u0027, \u0027country_reduced\u0027, modelId_reduced\u0027, \u0027placementAndCreative_reduced\u0027, \u0027deviceAppImpressions\u0027, \u0027ipmScore\u0027]\n                                                                                                                             ^\nSyntaxError: invalid syntax\n"
+      },
+      "dateCreated": "Sep 21, 2017 8:53:17 PM",
+      "dateStarted": "Dec 4, 2017 3:06:03 AM",
+      "dateFinished": "Dec 4, 2017 3:07:34 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n# prepare labeled sets\n\ncols_now \u003d [\u0027advertiserApp_catVec\u0027, \u0027publisher_app_catVec\u0027, \u0027reachability_catVec\u0027, \u0027country_catVec\u0027, \u0027modelId_catVec\u0027, \u0027placementAndCreative_catVec\u0027, \u0027deviceAppImpressions_catVec\u0027, \u0027ipmScore_catVec\u0027]\n\nassembler_features \u003d VectorAssembler(inputCols\u003dcols_now, outputCol\u003d\u0027features\u0027)\n\nlabelIndexer \u003d StringIndexer(inputCol\u003d\u0027has_install\u0027, outputCol\u003d\"label\")\n\ntmp +\u003d [assembler_features, labelIndexer]\npipeline \u003d Pipeline(stages\u003dtmp)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 9:09:48 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512355942259_-1460659380",
+      "id": "20171204-025222_434955028_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 265, in \u003cmodule\u003e\n    code \u003d compile(\u0027\\n\u0027.join(final_code), \u0027\u003cstdin\u003e\u0027, \u0027exec\u0027, ast.PyCF_ONLY_AST, 1)\n  File \"\u003cstdin\u003e\", line 1\n    cols_now \u003d [\u0027advertiserApp_catVec\u0027, \u0027publisher_app_catVec\u0027, \u0027reachability_catVec\u0027, \u0027country_catVec\u0027, modelId_catVec\u0027, \u0027placementAndCreative_catVec\u0027, \u0027deviceAppImpressions_catVec\u0027, \u0027ipmScore_catVec\u0027]\n                                                                                                                          ^\nSyntaxError: invalid syntax\n"
+      },
+      "dateCreated": "Dec 4, 2017 2:52:22 AM",
+      "dateStarted": "Dec 4, 2017 3:07:34 AM",
+      "dateFinished": "Dec 4, 2017 3:07:34 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nallData \u003d pipeline.fit(rawData).transform(rawData)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1506028031306_297909541",
+      "id": "20170921-210711_1549058005_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 277, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 1, in \u003cmodule\u003e\n  File \"/usr/lib/spark/python/pyspark/ml/base.py\", line 64, in fit\n    return self._fit(dataset)\n  File \"/usr/lib/spark/python/pyspark/ml/pipeline.py\", line 108, in _fit\n    model \u003d stage.fit(dataset)\n  File \"/usr/lib/spark/python/pyspark/ml/base.py\", line 64, in fit\n    return self._fit(dataset)\n  File \"/usr/lib/spark/python/pyspark/ml/wrapper.py\", line 236, in _fit\n    java_model \u003d self._fit_java(dataset)\n  File \"/usr/lib/spark/python/pyspark/ml/wrapper.py\", line 233, in _fit_java\n    return self._java_obj.fit(dataset._jdf)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/lib/spark/python/pyspark/sql/utils.py\", line 79, in deco\n    raise IllegalArgumentException(s.split(\u0027: \u0027, 1)[1], stackTrace)\nIllegalArgumentException: u\u0027Field \"advertiserAppXPublisherApp_reduced\" does not exist.\u0027\n\n"
+      },
+      "dateCreated": "Sep 21, 2017 9:07:11 PM",
+      "dateStarted": "Dec 4, 2017 3:07:34 AM",
+      "dateFinished": "Dec 4, 2017 3:07:59 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nallData.show()",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1506107782972_124315658",
+      "id": "20170922-191622_833208657_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 277, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 1, in \u003cmodule\u003e\n  File \"/usr/lib/spark/python/pyspark/sql/dataframe.py\", line 318, in show\n    print(self._jdf.showString(n, 20))\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/lib/spark/python/pyspark/sql/utils.py\", line 63, in deco\n    return f(*a, **kw)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/protocol.py\", line 319, in get_return_value\n    format(target_id, \".\", name), value)\nPy4JJavaError: An error occurred while calling o1137.showString.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 167.0 failed 4 times, most recent failure: Lost task 0.3 in stage 167.0 (TID 76478, ip-172-14-6-161.ec2.internal, executor 114): ExecutorLostFailure (executor 114 exited caused by one of the running tasks) Reason: Container killed by YARN for exceeding memory limits. 26.3 GB of 26.2 GB physical memory used. Consider boosting spark.yarn.executor.memoryOverhead.\nDriver stacktrace:\n\tat org.apache.spark.scheduler.DAGScheduler.org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages(DAGScheduler.scala:1461)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1449)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1448)\n\tat scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:59)\n\tat scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:1448)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:828)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:828)\n\tat scala.Option.foreach(Option.scala:257)\n\tat org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:828)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:1676)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1631)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1620)\n\tat org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:633)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:2071)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:2084)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:2097)\n\tat org.apache.spark.sql.execution.SparkPlan.executeTake(SparkPlan.scala:333)\n\tat org.apache.spark.sql.execution.CollectLimitExec.executeCollect(limit.scala:38)\n\tat org.apache.spark.sql.Dataset$$anonfun$org$apache$spark$sql$Dataset$$execute$1$1.apply(Dataset.scala:2371)\n\tat org.apache.spark.sql.execution.SQLExecution$.withNewExecutionId(SQLExecution.scala:58)\n\tat org.apache.spark.sql.Dataset.withNewExecutionId(Dataset.scala:2765)\n\tat org.apache.spark.sql.Dataset.org$apache$spark$sql$Dataset$$execute$1(Dataset.scala:2370)\n\tat org.apache.spark.sql.Dataset.org$apache$spark$sql$Dataset$$collect(Dataset.scala:2377)\n\tat org.apache.spark.sql.Dataset$$anonfun$head$1.apply(Dataset.scala:2113)\n\tat org.apache.spark.sql.Dataset$$anonfun$head$1.apply(Dataset.scala:2112)\n\tat org.apache.spark.sql.Dataset.withTypedCallback(Dataset.scala:2795)\n\tat org.apache.spark.sql.Dataset.head(Dataset.scala:2112)\n\tat org.apache.spark.sql.Dataset.take(Dataset.scala:2327)\n\tat org.apache.spark.sql.Dataset.showString(Dataset.scala:248)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.lang.reflect.Method.invoke(Method.java:498)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)\n\tat py4j.Gateway.invoke(Gateway.java:280)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.GatewayConnection.run(GatewayConnection.java:214)\n\tat java.lang.Thread.run(Thread.java:745)\n\n\n"
+      },
+      "dateCreated": "Sep 22, 2017 7:16:22 PM",
+      "dateStarted": "Dec 4, 2017 3:07:35 AM",
+      "dateFinished": "Dec 4, 2017 3:14:42 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nallData.cache()\ntrainingData, testData \u003d allData.randomSplit([0.7,0.3], seed\u003d0) # need to ensure same split for each time\nprint(\"Distribution of Pos and Neg in trainingData is: \", trainingData.groupBy(\"label\").count().show())\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1506107863645_1028615135",
+      "id": "20170922-191743_740000595_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 277, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 3, in \u003cmodule\u003e\n  File \"/usr/lib/spark/python/pyspark/sql/dataframe.py\", line 318, in show\n    print(self._jdf.showString(n, 20))\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/lib/spark/python/pyspark/sql/utils.py\", line 67, in deco\n    e.java_exception.getStackTrace()))\n  File \"/usr/lib64/python2.7/_abcoll.py\", line 605, in __iter__\n    v \u003d self[i]\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_collections.py\", line 191, in __getitem__\n    return self.__compute_item(key)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_collections.py\", line 167, in __compute_item\n    new_key \u003d self.__compute_index(key)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_collections.py\", line 156, in __compute_index\n    size \u003d len(self)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_collections.py\", line 238, in __len__\n    answer \u003d self._gateway_client.send_command(command)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 883, in send_command\n    response \u003d connection.send_command(command)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1028, in send_command\n    answer \u003d smart_decode(self.stream.readline()[:-1])\n  File \"/usr/lib64/python2.7/socket.py\", line 451, in readline\n    data \u003d self._sock.recv(self._rbufsize)\n  File \"/usr/lib/spark/python/pyspark/context.py\", line 236, in signal_handler\n    raise KeyboardInterrupt()\nKeyboardInterrupt\n\n"
+      },
+      "dateCreated": "Sep 22, 2017 7:17:43 PM",
+      "dateStarted": "Dec 4, 2017 3:07:59 AM",
+      "dateFinished": "Dec 4, 2017 3:22:07 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nrf \u003d RF(labelCol\u003d\u0027label\u0027, featuresCol\u003d\u0027features\u0027,numTrees\u003d200)\nfit \u003d rf.fit(trainingData)\ntransformed \u003d fit.transform(testData)\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1506107932805_308673322",
+      "id": "20170922-191852_102454326_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 272, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 2, in \u003cmodule\u003e\n  File \"/usr/lib/spark/python/pyspark/ml/base.py\", line 64, in fit\n    return self._fit(dataset)\n  File \"/usr/lib/spark/python/pyspark/ml/wrapper.py\", line 236, in _fit\n    java_model \u003d self._fit_java(dataset)\n  File \"/usr/lib/spark/python/pyspark/ml/wrapper.py\", line 233, in _fit_java\n    return self._java_obj.fit(dataset._jdf)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1131, in __call__\n    answer \u003d self.gateway_client.send_command(command)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 883, in send_command\n    response \u003d connection.send_command(command)\n  File \"/usr/lib/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1028, in send_command\n    answer \u003d smart_decode(self.stream.readline()[:-1])\n  File \"/usr/lib64/python2.7/socket.py\", line 451, in readline\n    data \u003d self._sock.recv(self._rbufsize)\n  File \"/usr/lib/spark/python/pyspark/context.py\", line 236, in signal_handler\n    raise KeyboardInterrupt()\nKeyboardInterrupt\n\n"
+      },
+      "dateCreated": "Sep 22, 2017 7:18:52 PM",
+      "dateStarted": "Dec 4, 2017 3:14:43 AM",
+      "dateFinished": "Dec 4, 2017 3:22:12 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\nresults \u003d transformed.select([\u0027probability\u0027, \u0027label\u0027])\n \n## prepare score-label set\nresults_collect \u003d results.collect()\nresults_list \u003d [(float(i[0][0]), 1.0-float(i[1])) for i in results_collect]\nscoreAndLabels \u003d sc.parallelize(results_list)\n \nmetrics \u003d metric(scoreAndLabels)\nprint(\"The ROC score is (@numTrees\u003d200): \", metrics.areaUnderROC)\n\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1506107992398_-434433335",
+      "id": "20170922-191952_303098097_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 279, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/tmp/zeppelin_pyspark-8309693672176471737.py\", line 272, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 1, in \u003cmodule\u003e\nNameError: name \u0027transformed\u0027 is not defined\n\n"
+      },
+      "dateCreated": "Sep 22, 2017 7:19:52 PM",
+      "dateStarted": "Dec 4, 2017 3:22:08 AM",
+      "dateFinished": "Dec 4, 2017 3:22:12 AM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nfrom sklearn.metrics import roc_curve, auc\nimport matplotlib\n \nfpr \u003d dict()\ntpr \u003d dict()\nroc_auc \u003d dict()\n \ny_test \u003d [i[1] for i in results_list]\ny_score \u003d [i[0] for i in results_list]\n \nfpr, tpr, _ \u003d roc_curve(y_test, y_score)\nroc_auc \u003d auc(fpr, tpr)\n \n\nplt.figure()\nplt.plot(fpr, tpr, label\u003d\u0027ROC curve (area \u003d %0.2f)\u0027 % roc_auc)\nplt.plot([0, 1], [0, 1], \u0027k--\u0027)\nplt.xlim([0.0, 1.0])\nplt.ylim([0.0, 1.05])\nplt.xlabel(\u0027False Positive Rate\u0027)\nplt.ylabel(\u0027True Positive Rate\u0027)\nplt.title(\u0027Receiver operating characteristic example\u0027)\nplt.legend(loc\u003d\"lower right\")\nplt.show()\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1506108092896_116865866",
+      "id": "20170922-192132_1021417256_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "org.apache.thrift.transport.TTransportException\n\tat org.apache.thrift.transport.TIOStreamTransport.read(TIOStreamTransport.java:132)\n\tat org.apache.thrift.transport.TTransport.readAll(TTransport.java:86)\n\tat org.apache.thrift.protocol.TBinaryProtocol.readAll(TBinaryProtocol.java:429)\n\tat org.apache.thrift.protocol.TBinaryProtocol.readI32(TBinaryProtocol.java:318)\n\tat org.apache.thrift.protocol.TBinaryProtocol.readMessageBegin(TBinaryProtocol.java:219)\n\tat org.apache.thrift.TServiceClient.receiveBase(TServiceClient.java:69)\n\tat org.apache.zeppelin.interpreter.thrift.RemoteInterpreterService$Client.recv_interpret(RemoteInterpreterService.java:236)\n\tat org.apache.zeppelin.interpreter.thrift.RemoteInterpreterService$Client.interpret(RemoteInterpreterService.java:220)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreter.interpret(RemoteInterpreter.java:325)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:105)\n\tat org.apache.zeppelin.notebook.Paragraph.jobRun(Paragraph.java:355)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:200)\n\tat org.apache.zeppelin.scheduler.RemoteScheduler$JobRunner.run(RemoteScheduler.java:328)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:471)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:262)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:178)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:292)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:615)\n\tat java.lang.Thread.run(Thread.java:745)\n"
+      },
+      "dateCreated": "Sep 22, 2017 7:21:32 PM",
+      "dateStarted": "Dec 4, 2017 3:22:12 AM",
+      "dateFinished": "Dec 4, 2017 4:33:42 AM",
+      "status": "ERROR",
+      "errorMessage": "org.apache.thrift.transport.TTransportException\n\tat org.apache.thrift.transport.TIOStreamTransport.read(TIOStreamTransport.java:132)\n\tat org.apache.thrift.transport.TTransport.readAll(TTransport.java:86)\n\tat org.apache.thrift.protocol.TBinaryProtocol.readAll(TBinaryProtocol.java:429)\n\tat org.apache.thrift.protocol.TBinaryProtocol.readI32(TBinaryProtocol.java:318)\n\tat org.apache.thrift.protocol.TBinaryProtocol.readMessageBegin(TBinaryProtocol.java:219)\n\tat org.apache.thrift.TServiceClient.receiveBase(TServiceClient.java:69)\n\tat org.apache.zeppelin.interpreter.thrift.RemoteInterpreterService$Client.recv_interpret(RemoteInterpreterService.java:236)\n\tat org.apache.zeppelin.interpreter.thrift.RemoteInterpreterService$Client.interpret(RemoteInterpreterService.java:220)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreter.interpret(RemoteInterpreter.java:325)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:105)\n\tat org.apache.zeppelin.notebook.Paragraph.jobRun(Paragraph.java:355)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:200)\n\tat org.apache.zeppelin.scheduler.RemoteScheduler$JobRunner.run(RemoteScheduler.java:328)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:471)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:262)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:178)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:292)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:615)\n\tat java.lang.Thread.run(Thread.java:745)\n",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 4, 2017 2:58:06 AM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1506110274110_-1399703216",
+      "id": "20170922-195754_1757720243_q_YP4C4E8JTW1505414578",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": ""
+      },
+      "dateCreated": "Sep 22, 2017 7:57:54 PM",
+      "dateStarted": "Dec 4, 2017 3:22:12 AM",
+      "dateFinished": "Dec 4, 2017 3:22:12 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    }
+  ],
+  "name": "rf_example",
+  "id": "YP4C4E8JTW1505414578",
+  "angularObjects": {
+    "2CSGYZQ6Gnull1501659668586:shared_process": [],
+    "2CPMXN5K1null1501659668571:shared_process": [],
+    "2CP3E3U35null1501659668597:shared_process": [],
+    "2CSEYEG4Ynull1501659668591:shared_process": []
+  },
+  "config": {
+    "isDashboard": false
+  },
+  "info": {},
+  "source": "FCN"
+}
