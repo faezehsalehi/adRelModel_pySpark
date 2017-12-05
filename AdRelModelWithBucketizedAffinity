@@ -1,0 +1,541 @@
+{
+  "paragraphs": [
+    {
+      "text": "%pyspark\nimport optparse\nfrom pyspark.sql import SparkSession\nimport pyspark.sql.functions as F\nfrom pyspark.sql.functions import *\nfrom pyspark.sql.functions import udf\nfrom pyspark.sql.types import StringType\nfrom pyspark.ml import Pipeline\nfrom pyspark.ml.classification import RandomForestClassifier as RF\nfrom pyspark.ml.feature import StringIndexer, VectorIndexer, VectorAssembler, SQLTransformer\nfrom pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator\nfrom pyspark.ml.tuning import CrossValidator, ParamGridBuilder\nfrom pyspark.ml.classification import LogisticRegression\nimport numpy as np\nimport functools\nfrom pyspark.ml.feature import OneHotEncoder\nimport pyspark.sql.functions as F\nfrom pyspark.sql.types import StringType\nimport math\n\n\nspark \u003d SparkSession\\\n    .builder\\\n    .appName(\"PythonSQL\")\\\n    .config(\"spark.some.config.option\", \"some-value\")\\\n    .getOrCreate()",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:35:36 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502505464_-585704105",
+      "id": "20171205-193505_988635036_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:35:05 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502528859_2091240824",
+      "id": "20171205-193528_492422619_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:35:28 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#filling missing values\n\nrawData \u003d rawData.na.fill({\u0027affinity\u0027: 0, \u0027has_install\u0027: 0, \u0027has_click\u0027: 0,  \u0027publisher_app\u0027: \u0027unknown\u0027, \u0027reachability\u0027: \u0027unknown\u0027, \u0027country\u0027: \u0027unknown\u0027, \u0027model_id\u0027: \u0027unknown\u0027, \u0027ad_type\u0027: \u0027unknown\u0027, \u0027advertiser_app\u0027: \u0027unknown\u0027,\u0027advertiser_campaign\u0027: \u0027unknown\u0027,\u0027advertiser_condition_set\u0027: \u0027unknown\u0027,\u0027device_advertising_app_impressions\u0027: 0, \u0027os\u0027: \u0027unknown\u0027, \u0027ipm_score\u0027: -1, \u0027bid_value\u0027: 0, \u0027creative_type\u0027: \u0027-1\u0027, \u0027app_platform\u0027: \u0027unknown\u0027, \u0027impression_ts\u0027 : -1, \u0027adv_app_last_impression_ts\u0027: -1, \u0027adv_app_last_click_ts\u0027: -1})",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:36:17 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502554376_849686772",
+      "id": "20171205-193554_740124407_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:35:54 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502571925_79434798",
+      "id": "20171205-193611_1174789358_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:36:11 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#deviceAppImpressions\n\ndeviceAppImpr_udf \u003d F.udf(lambda impressionCount: int(math.floor(math.pow(math.log(impressionCount), 2))) if impressionCount\u003e0 else \"X\", StringType())\n\nrawData \u003d rawData.withColumn(\"deviceAppImpressions\", deviceAppImpr_udf(\u0027device_advertising_app_impressions\u0027))\n\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:36:45 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502587359_1156762367",
+      "id": "20171205-193627_871831647_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:36:27 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502596983_2116542306",
+      "id": "20171205-193636_444538150_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:36:36 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#ipm score\n\ndef ipmMap(impScore):\n    defaultIpmScore \u003d \"-1\"\n    if ipmScore \u003c\u003d 0:\n        return defaultIpmScore\n    else:\n        adjustedScore \u003d ipmScore * 1000\n    if adjustedScore \u003c 3.0:\n        return str(int(adjustedScore / 0.3)) + \"x0.3\"\n    elif adjustedScore \u003c 4.0:\n        return \"3+\" + str(int((adjustedScore - 3.0) / 0.2)) + \"x0.2\"\n    elif adjustedScore \u003c 12:\n        return str(int(adjustedScore))\n    else:\n        return \"12+\"\n    \nipm_udf \u003d F.udf(ipmMap, StringType())\n\nrawData \u003d rawData.withColumn(\"ipmScore\", deviceAppImpr_udf(\u0027ipm_score\u0027))\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:37:12 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502611558_-981440513",
+      "id": "20171205-193651_727284858_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:36:51 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502624939_982733270",
+      "id": "20171205-193704_126252404_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:37:04 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#click recency\n \ndef lastClickRecency(lastClickTs, impTs):\n    defaultRecencyValue \u003d \"-1\"\n    diffSeconds \u003d int(impTs) - int(lastClickTs)\n    diffHour \u003d int(diffSeconds / 3600 + 1)\n    diffDay \u003d int(diffHour / 24 + 1)\n    if (lastClickTs \u003c 0 or diffSeconds \u003c\u003d 0):\n        return defaultRecencyValue\n    elif (lastClickTs \u003d\u003d 0):\n        return \"error_val\"\n    else:\n        if (diffHour \u003c\u003d 1):\n            return str(diffHour) + \"_hour\"\n        elif (diffDay \u003c\u003d 15):\n            return str(diffDay) + \"_day\"\n        else:\n            return \"15+_days\"\n            \nlastClickRecency_udf \u003d F.udf(lastClickRecency, StringType())\n\nrawData \u003d rawData.withColumn(\"lastClickRecency\", lastClickRecency_udf(\u0027adv_app_last_click_ts\u0027, \u0027impression_ts\u0027))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:37:39 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502636372_-1730900722",
+      "id": "20171205-193716_1372306251_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:37:16 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#affinity\n\naffinity_udf \u003d F.udf(lambda affinity: int(math.floor(math.pow(math.log(affinity), 2))) if affinity\u003e0 else \"X\", StringType())\n\nrawData \u003d rawData.withColumn(\"affinityScore\", affinity_udf(\u0027affinity\u0027))",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:45:03 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502922258_-1938253544",
+      "id": "20171205-194202_36439104_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:42:02 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502651164_1167828140",
+      "id": "20171205-193731_452733634_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:37:31 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#concatenate columns and create cross features\n\nconcat_udf \u003d F.udf(lambda cols: \"_X_\".join([x if x is not None else \"unknown\" for x in cols]), StringType())\n\nrawData \u003d rawData.withColumn(\"advertiserAppXPublisherApp\", concat_udf(F.array(\"advertiser_app\", \"publisher_app\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXReachability\", concat_udf(F.array(\"advertiser_app\", \"reachability\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXCountry\", concat_udf(F.array(\"advertiser_app\", \"country\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXModelId\", concat_udf(F.array(\"advertiser_app\", \"modelId\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXPublisherApp\", concat_udf(F.array(\"advertiser_app\", \"placementAndCreative\", \"publisher_app\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXReachability\", concat_udf(F.array(\"advertiser_app\", \"placementAndCreative\",  \"reachability\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXModelId\", concat_udf(F.array(\"advertiser_app\", \"placementAndCreative\", \"modelId\")))\nrawData \u003d rawData.withColumn(\"advertiserAppXplacementAndCreativeXCountry\", concat_udf(F.array(\"advertiser_app\", \"placementAndCreative\", \"country\")))\n\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:38:00 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502662287_1540096509",
+      "id": "20171205-193742_1489239019_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:37:42 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n#frequency filtering\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027publisher_app\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"publisher_app_count\",createCount_udf(\u0027publisher_app\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027publisher_app_reduced\u0027, createNewColFromTwo(\u0027publisher_app\u0027,\u0027publisher_app_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027reachability\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"reachability_count\",createCount_udf(\u0027reachability\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027reachability_reduced\u0027, createNewColFromTwo(\u0027reachability\u0027,\u0027reachability_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027country\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"country_count\",createCount_udf(\u0027country\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027country_reduced\u0027, createNewColFromTwo(\u0027country\u0027,\u0027country_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027modelId\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"modelId_count\",createCount_udf(\u0027modelId\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027modelId_reduced\u0027, createNewColFromTwo(\u0027modelId\u0027,\u0027modelId_count\u0027))\n\nthreshold \u003d 1000\nraw_list \u003d rawData.groupBy(\u0027placementAndCreative\u0027).count().collect()\nraw_dict \u003d {r[0] : r[1] for r in raw_list}\ncreateCount_udf \u003d F.udf(lambda col: raw_dict.get(col, 0), StringType())\nrawData \u003d rawData.withColumn(\"placementAndCreative_count\",createCount_udf(\u0027placementAndCreative\u0027))\ncreateNewColFromTwo \u003d F.udf(lambda col, count: col if count \u003e threshold else \"unknown\" , StringType())\nrawData \u003d rawData.withColumn(\u0027placementAndCreative_reduced\u0027, createNewColFromTwo(\u0027placementAndCreative\u0027,\u0027placementAndCreative_count\u0027))\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:38:31 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502671530_-440206080",
+      "id": "20171205-193751_1862672996_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:37:51 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502703956_-1497834834",
+      "id": "20171205-193823_1276025458_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:38:23 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\ncolumn_vec_in \u003d [\u0027advertiser_app\u0027, \u0027publisher_app_reduced\u0027, \u0027reachability_reduced\u0027, \u0027country_reduced\u0027, \u0027modelId_reduced\u0027, \u0027placementAndCreative_reduced\u0027, \u0027advertiserAppXPublisherApp_reduced\u0027, \u0027advertiserAppXReachability_reduced\u0027, \u0027advertiserAppXCountry_reduced\u0027, \u0027advertiserAppXModelId_reduced\u0027, \u0027advertiserAppXplacementAndCreativeXPublisherApp_reduced\u0027, \u0027advertiserAppXplacementAndCreativeXReachability_reduced\u0027,\u0027advertiserAppXplacementAndCreativeXModelId_reduced\u0027, \u0027advertiserAppXplacementAndCreativeXCountry_reduced\u0027, \u0027deviceAppImpressions\u0027, \u0027ipmScore\u0027, \u0027lastImpressionRecency\u0027, \u0027lastClickRecency\u0027, \u0027affinityScore\u0027]\n\ncolumn_vec_out \u003d [\u0027advertiserApp_catVec\u0027, \u0027publisher_app_catVec\u0027, \u0027reachability_catVec\u0027, \u0027country_catVec\u0027, \u0027modelId_catVec\u0027, \u0027placementAndCreative_catVec\u0027,\u0027advertiserAppXPublisherApp_catVec\u0027, \u0027advertiserAppXReachability_catVec\u0027, \u0027advertiserAppXCountry_catVec\u0027, \u0027advertiserAppXModelId_catVec\u0027, \u0027advertiserAppXplacementAndCreativeXPublisherApp_catVec\u0027,\u0027advertiserAppXplacementAndCreativeXReachability_catVec\u0027,\u0027advertiserAppXplacementAndCreativeXModelId_catVec\u0027, \u0027advertiserAppXplacementAndCreativeXCountry_catVec\u0027, \u0027deviceAppImpressions_catVec\u0027, \u0027ipmScore_catVec\u0027, \u0027lastImpressionRecency_catVec\u0027, \u0027lastClickRecency_catVec\u0027, \u0027affinityScore_catVec\u0027]\n \nindexers \u003d [StringIndexer(inputCol\u003dx, outputCol\u003dx+\u0027_tmp\u0027) for x in column_vec_in ]\n \nencoders \u003d [OneHotEncoder(dropLast\u003dFalse, inputCol\u003dx+\"_tmp\", outputCol\u003dy)\nfor x,y in zip(column_vec_in, column_vec_out)]\n\ntmp \u003d [[i,j] for i,j in zip(indexers, encoders)]\n\ntmp \u003d [i for sublist in tmp for i in sublist]",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:45:57 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502719895_1059621754",
+      "id": "20171205-193839_1743561334_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:38:39 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n# prepare labeled sets\n\ncols_now \u003d [\u0027advertiserApp_catVec\u0027, \u0027publisher_app_catVec\u0027, \u0027reachability_catVec\u0027, \u0027country_catVec\u0027, \u0027modelId_catVec\u0027, \u0027placementAndCreative_catVec\u0027, \u0027advertiserAppXPublisherApp_catVec\u0027, \u0027advertiserAppXReachability_catVec\u0027, \u0027advertiserAppXCountry_catVec\u0027, \u0027advertiserAppXModelId_catVec\u0027, \u0027advertiserAppXplacementAndCreativeXPublisherApp_catVec\u0027, \u0027advertiserAppXplacementAndCreativeXReachability_catVec\u0027,\u0027advertiserAppXplacementAndCreativeXModelId_catVec\u0027, \u0027advertiserAppXplacementAndCreativeXCountry_catVec\u0027,\u0027deviceAppImpressions_catVec\u0027, \u0027ipmScore_catVec\u0027, \u0027lastImpressionRecency_catVec\u0027, \u0027lastClickRecency_catVec\u0027, \u0027affinityScore_catVec\u0027]\n\nassembler_features \u003d VectorAssembler(inputCols\u003dcols_now, outputCol\u003d\u0027features\u0027)\n\nlabelIndexer \u003d StringIndexer(inputCol\u003d\u0027has_install\u0027, outputCol\u003d\"label\")\n\ntmp +\u003d [assembler_features, labelIndexer]\npipeline \u003d Pipeline(stages\u003dtmp)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:45:57 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502731918_120059482",
+      "id": "20171205-193851_1112535584_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:38:51 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\ntrainData \u003d rawData.filter(rawData.impression_dt!\u003dendDate)\ntestData \u003d rawData.filter(rawData.impression_dt \u003d\u003d endDate)%pyspark\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:39:34 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502742946_1944938840",
+      "id": "20171205-193902_293373622_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:39:02 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502767471_1000410938",
+      "id": "20171205-193927_764505569_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:39:27 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n#allData.cache()\n\n#trainingData, testData \u003d allData.randomSplit([0.7,0.3], seed\u003d0) # need to ensure same split for each time\n\nprint(\"Distribution of Pos and Neg in trainingData is: \", trainingData.groupBy(\"label\").count().show())\n",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:40:09 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502780811_-1314607869",
+      "id": "20171205-193940_415353323_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:39:40 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502800705_1563160662",
+      "id": "20171205-194000_1171351587_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:40:00 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502823457_-373634653",
+      "id": "20171205-194023_395428349_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:40:23 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\ntrainingSummary \u003d lrModel.summary\n\n# Obtain the objective per iteration\nobjectiveHistory \u003d trainingSummary.objectiveHistory\n\nprint(\"objectiveHistory:\")\n\nfor objective in objectiveHistory:\n    print(objective)\n\n# Obtain the receiver-operating characteristic as a dataframe and areaUnderROC.\ntrainingSummary.roc.show()\n\nprint(\"areaUnderROC: \" + str(trainingSummary.areaUnderROC))\n\n# Set the model threshold to maximize F-Measure\nfMeasure \u003d trainingSummary.fMeasureByThreshold\n\nmaxFMeasure \u003d fMeasure.groupBy().max(\u0027F-Measure\u0027).select(\u0027max(F-Measure)\u0027).head()\nbestThreshold \u003d fMeasure.where(fMeasure[\u0027F-Measure\u0027] \u003d\u003d maxFMeasure[\u0027max(F-Measure)\u0027]) \\\n    .select(\u0027threshold\u0027).head()[\u0027threshold\u0027]\n    \nlr.setThreshold(bestThreshold)",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:40:58 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502838360_918767551",
+      "id": "20171205-194038_1601387121_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:40:38 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502850150_-476331961",
+      "id": "20171205-194050_1339459324_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:40:50 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\nfrom sklearn.metrics import roc_curve, auc\nimport matplotlib\n \nfpr \u003d dict()\ntpr \u003d dict()\nroc_auc \u003d dict()\n \ny_test \u003d [i[1] for i in results_list]\ny_score \u003d [i[0] for i in results_list]\n \nfpr, tpr, _ \u003d roc_curve(y_test, y_score)\nroc_auc \u003d auc(fpr, tpr)\n \n\nplt.figure()\nplt.plot(fpr, tpr, label\u003d\u0027ROC curve (area \u003d %0.2f)\u0027 % roc_auc)\nplt.plot([0, 1], [0, 1], \u0027k--\u0027)\nplt.xlim([0.0, 1.0])\nplt.ylim([0.0, 1.05])\nplt.xlabel(\u0027False Positive Rate\u0027)\nplt.ylabel(\u0027True Positive Rate\u0027)\nplt.title(\u0027Receiver operating characteristic example\u0027)\nplt.legend(loc\u003d\"lower right\")\nplt.show()",
+      "user": "faezeh.salehi@chartboost.com",
+      "dateUpdated": "Dec 5, 2017 7:41:23 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502860206_711219328",
+      "id": "20171205-194100_1814408658_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:41:00 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1512502874932_1971687373",
+      "id": "20171205-194114_1924292962_q_FAMKPJ4D3Y1512502504",
+      "dateCreated": "Dec 5, 2017 7:41:14 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    }
+  ],
+  "name": "AdRelModeWithBucketizedAffinity",
+  "id": "FAMKPJ4D3Y1512502504",
+  "angularObjects": {
+    "2CSGYZQ6Gnull1501659668586:shared_process": [],
+    "2CPMXN5K1null1501659668571:shared_process": [],
+    "2CP3E3U35null1501659668597:shared_process": [],
+    "2CSEYEG4Ynull1501659668591:shared_process": []
+  },
+  "config": {
+    "isDashboard": false
+  },
+  "info": {},
+  "source": "FCN"
+}
