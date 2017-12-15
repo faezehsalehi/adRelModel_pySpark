@@ -274,9 +274,9 @@
       "progressUpdateIntervalMs": 500
     },
     {
-      "text": "%pyspark\n\n#click recency\n \ndef lastClickRecency(lastClickTs, impTs):\n    defaultRecencyValue \u003d \"-1\"\n    diffSeconds \u003d impTs - lastClickTs\n    diffHour \u003d int(diffSeconds / 3600 + 1)\n    diffDay \u003d int(diffHour / 24 + 1)\n    if (lastClickTs \u003c 0 or diffSeconds \u003c\u003d 0):\n        return defaultRecencyValue\n    elif (lct \u003d\u003d 0):\n        return \"error_val\"\n    else:\n        if (diffHour \u003c\u003d 1):\n            return str(diffHour) + \"_hour\"\n        elif (diffDay \u003c\u003d 15):\n            return str(diffDay) + \"_day\"\n        else:\n            return \"15+_days\"\n            \nlastClickRecency_udf \u003d F.udf(lastClickRecency, StringType())\n\nrawData \u003d rawData.withColumn(\"lastClickRecency\", lastClickRecency_udf(\u0027adv_app_last_click_ts\u0027, \u0027impression_ts\u0027))",
+      "text": "%pyspark\n\n#click recency\n \ndef lastClickRecency(lastClickTs, impTs):\n    defaultRecencyValue \u003d \"-1\"\n    diffSeconds \u003d impTs - lastClickTs\n    diffHour \u003d int(diffSeconds / 3600 + 1)\n    diffDay \u003d int(diffHour / 24 + 1)\n    if (lastClickTs \u003c 0 or diffSeconds \u003c\u003d 0):\n        return defaultRecencyValue\n    elif (lastClickRecency \u003d\u003d 0):\n        return \"error_val\"\n    else:\n        if (diffHour \u003c\u003d 1):\n            return str(diffHour) + \"_hour\"\n        elif (diffDay \u003c\u003d 15):\n            return str(diffDay) + \"_day\"\n        else:\n            return \"15+_days\"\n            \nlastClickRecency_udf \u003d F.udf(lastClickRecency, StringType())\n\nrawData \u003d rawData.withColumn(\"lastClickRecency\", lastClickRecency_udf(\u0027adv_app_last_click_ts\u0027, \u0027impression_ts\u0027))",
       "user": "faezeh.salehi@chartboost.com",
-      "dateUpdated": "Dec 4, 2017 11:14:59 PM",
+      "dateUpdated": "Dec 4, 2017 11:23:16 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
